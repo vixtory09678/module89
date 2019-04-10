@@ -1,0 +1,13 @@
+data/VL53L0X_platform.h.i
+data/VL53L0X.h.i
+data/X_NUCLEO_COMMON.lib.i
+data/VL53L0X_types.h.i
+data/VL53L0X_i2c_platform.h.i
+data/STMPE1600/Stmpe1600.h.i
+data/VL53L0X_device.h.i
+data/VL53L0X.cpp.i
+data/VL53L0X_interrupt_threshold_settings.h.i
+data/VL53L0X_tuning.h.i
+data/VL53L0X_platform_log.h.i
+data/ST_INTERFACES.lib.i
+data/VL53L0X_def.h.i

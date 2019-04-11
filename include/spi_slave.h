@@ -1,4 +1,4 @@
-#define SIZE_DATA 25
+#define SIZE_DATA 20
 
 union PackData{
   float _coeff;
@@ -18,7 +18,7 @@ void addHeader(uint8_t *data){
 
 int getCalChksm(PackData *data){
     int chksm = 0;
-    for (int i = 0 ; i < 21 ; i++){
+    for (int i = 0 ; i < SIZE_DATA ; i++){
         for (int j = 0; j < 4 ; j++){
             chksm += (int)data[i]._coeff_bytes[j];
         }

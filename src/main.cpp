@@ -9,8 +9,9 @@
 #define VL53L0_I2C_SCL   PB_8
 
 MbedJSONValue dataJson;
-
 Serial pc(USBTX, USBRX);
+int cnt_buff = 0;
+bool flagReadSerial = false;
 
 char buff[2048];
 static DevI2C devI2c(VL53L0_I2C_SDA,VL53L0_I2C_SCL);
@@ -20,6 +21,22 @@ SPI spi(PC_12, PC_11, PC_10); //MOSI MISO SCLK
 DigitalOut ss1(PC_5);
 DigitalOut led(LED2);
 
+void onSerialEvent() {
+  if (pc.readable()) {
+
+    while (pc.readable()) {
+      uint8_t data = pc.getc();
+      buff[cnt_buff++] = (char)data;
+
+      if(data == '\n') {
+        buff[cnt_buff] = '\0';
+        flagReadSerial = true;
+        cnt_buff = 0;
+      }
+    }
+  }
+}
+
 
 void setup(){
 // put your setup code here, to run once:
@@ -27,10 +44,11 @@ void setup(){
   spi.format(8,1);
   spi.frequency(20000000);
   pc.baud(115200);
+  pc.attach(&onSerialEvent);
 
-  for (int i = 0; i < SIZE_DATA ; i++){
-    slave_joint1[i]._coeff = 20.234;
-  }
+  // for (int i = 0; i < SIZE_DATA ; i++){
+  //   slave_joint1[i]._coeff = 1.55;
+  // }
 }
 
 void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
@@ -39,7 +57,7 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   pc.printf("length is %d\n",length);
   
   addHeader(data);
-  data[2] = size;
+  data[2] = 2;
   data[length-1] = (unsigned char)(getCalChksm(coefficient) & 0xFF);
   memcpy(&data[3],coefficient,size);
 
@@ -52,11 +70,11 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   printf("receive -> ");
   cs->write(1);
   cs->write(0);
-  // wait_us(50);
+  wait_us(50);
   for (int num_coeff = 0 ; num_coeff < sizeof(data); num_coeff++){
     buff[num_coeff] = spi.write(data[num_coeff]);
   }
-  // wait_us(50);
+  wait_us(50);
   cs->write(1);
 
   for (int num_coeff = 1 ; num_coeff < sizeof(data) ; num_coeff++){
@@ -66,17 +84,29 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
     } else {
       printf("%d ",buff[num_coeff]);
     }
-    // printf("%d ",buf[num_coeff]);
+    // printf("%d ",buff[num_coeff]);
   }
   printf("\n");
 }
 
 void loop(){
+  if (flagReadSerial) {
+    parse(dataJson,buff);
+
+    string cmd = dataJson["cmd"].get<string>();
+    if (cmd.compare("move") == 0){
+      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+        for (int j = 0; j < 5 ; j++){
+          slave_joint1[cnt++]._coeff = dataJson["data"][0][i][j].get<double>();
+        }
+      }
+      sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
+    }
+    flagReadSerial = false;
+  }
   // printf("distance is %d\n", dSensor);
-  sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
-  led = 1;
-  wait(0.5);
-  led = 0;
+  // sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
+
 }
 
 

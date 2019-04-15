@@ -13,7 +13,7 @@ SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
 uint8_t buffer[128];
 uint8_t cnt_buff = 0;
 uint8_t i = 0;
-uint8_t instruct = 0;
+volatile uint8_t instruct = 0;
 
 bool isReadDyProtocol = false;
 
@@ -35,7 +35,7 @@ void checkReceiveData(){
                 switch (instruct)
                 {
                 case CONFIGURATION:
-                    if (i < 3) {
+                    if (i < 5) {
                         // reply to master
                         device.reply(buffer[i]);
                         buffer[i++] = tmp;
@@ -45,7 +45,7 @@ void checkReceiveData(){
                             // complete
                             isReadDyProtocol = true;
                         }else{
-                            device.reply(11);
+                            
                         }
                         cnt_buff = 0;
                         i = 0;

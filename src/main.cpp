@@ -8,6 +8,7 @@
 #define VL53L0_I2C_SDA   PB_9
 #define VL53L0_I2C_SCL   PB_8
 
+
 MbedJSONValue dataJson;
 Serial pc(USBTX, USBRX);
 int cnt_buff = 0;
@@ -19,11 +20,13 @@ static DevI2C devI2c(VL53L0_I2C_SDA,VL53L0_I2C_SCL);
 Ticker loopSender;
 SPI spi(PC_12, PC_11, PC_10); //MOSI MISO SCLK
 DigitalOut ss1(PC_5);
+DigitalOut ss2(PC_6);
+DigitalOut ss3(PC_8);
+DigitalOut ss4(PC_9);
 DigitalOut led(LED2);
 
 void onSerialEvent() {
   if (pc.readable()) {
-
     while (pc.readable()) {
       uint8_t data = pc.getc();
       buff[cnt_buff++] = (char)data;
@@ -54,20 +57,11 @@ void setup(){
 void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   int length = size + 4;
   unsigned char data[length];
-  pc.printf("length is %d\n",length);
   
   addHeader(data);
   data[2] = 2;
   data[length-1] = (unsigned char)(getCalChksm(coefficient) & 0xFF);
   memcpy(&data[3],coefficient,size);
-
-  for (int num_coeff = 0 ; num_coeff < length ; num_coeff++){
-    printf("%d ",data[num_coeff]);
-  }
-  printf("\n");
-  printf("\n");
-
-  printf("receive -> ");
   cs->write(1);
   cs->write(0);
   wait_us(50);
@@ -77,6 +71,7 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   wait_us(50);
   cs->write(1);
 
+ printf("receive -> ");
   for (int num_coeff = 1 ; num_coeff < sizeof(data) ; num_coeff++){
     if (num_coeff == sizeof(data) - 1){
       printf("%d ",buff[0]);
@@ -84,12 +79,12 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
     } else {
       printf("%d ",buff[num_coeff]);
     }
-    // printf("%d ",buff[num_coeff]);
   }
   printf("\n");
 }
 
 void loop(){
+  
   if (flagReadSerial) {
     parse(dataJson,buff);
 
@@ -100,13 +95,27 @@ void loop(){
           slave_joint1[cnt++]._coeff = dataJson["data"][0][i][j].get<double>();
         }
       }
+      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+        for (int j = 0; j < 5 ; j++){
+          slave_joint2[cnt++]._coeff = dataJson["data"][1][i][j].get<double>();
+        }
+      }
+      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+        for (int j = 0; j < 5 ; j++){
+          slave_joint3[cnt++]._coeff = dataJson["data"][2][i][j].get<double>();
+        }
+      }
+
       sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
+      // sendDataSlave(&ss2,slave_joint2,sizeof(slave_joint2));
+      // sendDataSlave(&ss3,slave_joint3,sizeof(slave_joint3));
     }
     flagReadSerial = false;
   }
-  // printf("distance is %d\n", dSensor);
-  // sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
-
+  // led = 1;
+  // wait(0.5);
+  // led = 0;
+  // wait(0.5);
 }
 
 

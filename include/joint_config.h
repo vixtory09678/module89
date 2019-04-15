@@ -2,7 +2,7 @@
 #define JOINT_CONFIG
 
 
-#define SIZE_DATA 20
+#define SIZE_DATA 25
 #define JOINT_NUM 1
 
 union PackData{
@@ -10,6 +10,7 @@ union PackData{
   uint8_t _coeff_bytes[4];
 };
 PackData slave_joint1[SIZE_DATA];
+PackData config;
 
 typedef struct _feedback{
   float Kp;
@@ -19,6 +20,8 @@ typedef struct _feedback{
   float error;
   float lastError;
   float tua;
+
+  float time;
 }FeedbackControl;
 
 FeedbackControl configFb = {
@@ -27,7 +30,8 @@ FeedbackControl configFb = {
   0.0f,     // Kd
   0.0f,     // error
   0.0f,     // lastError
-  0.0f      // tua
+  0.0f,     // tua
+  0.0f      // time
 };
 
 FeedbackControl trajectFb = {
@@ -36,8 +40,10 @@ FeedbackControl trajectFb = {
   0.0f,     // Kd
   0.0f,     // error
   0.0f,     // lastError
-  0.0f      // tua
+  0.0f,     // tua
+  0.0f      // time
 };
+
 
 #if (JOINT_NUM == 1)
     #define JOINT_LIMIT 150

@@ -5,6 +5,7 @@
 
 #define CONFIGURATION   1
 #define TRAJECTORY      2
+#define PACKET_CONFIG_SIZE  3
 #define PACKET_SIZE     SIZE_DATA * 4
 
 SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
@@ -51,7 +52,7 @@ void checkReceiveData(){
                     }
                     break;
                 case TRAJECTORY:
-                    if (i < 101) {
+                    if (i < PACKET_SIZE + 1) {
 
                         buffer[i++] = tmp;
                     } else {

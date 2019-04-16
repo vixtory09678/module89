@@ -1,18 +1,16 @@
 #include <mbed.h>
-#include <AS5600.h>
 #include "joint_config.h"
 #include "protocol_config.h"
+#include <AS5600.h>
 #include <math.h>
-#include "compute.h"
 
 AS5600 encoder(B9,B8);//SDA SCL
-
-
-Ticker computeFeedback;
+Timer t;
 
 int  getAngle(){
   return ((encoder.getAngleAbsolute() + (2047 - SET_ZERO)) % 4096) - 2047;
 }
+
 int toEncoder(float degree){
   return (config._coeff / 360.0) * 4095;
 }
@@ -20,7 +18,7 @@ int toEncoder(float degree){
 int indexCalculate = 0;
 
 #define T_PERIOD 0.002f
-void compute(){
+inline void compute(){
   switch (instruct)
   {
   case CONFIGURATION:
@@ -46,24 +44,20 @@ void compute(){
                     (3.0 * slave_joint1[indexCalculate + 3]._coeff * tp2);        // 3 * c3 * t^2
 
     if (trajectFb.time >= slave_joint1[indexCalculate + 4]._coeff){
-      indexCalculate += 1;
+      
+      if (indexCalculate < 6)
+        indexCalculate += 1;
+      else
+        indexCalculate = 5;
     } else {
-
+      configFb.tua = configFb.Kp * (configFb.error)
+                    + configFb.Kd * ((q_dot_ref - configFb.error - configFb.lastError) / T_PERIOD);
     }
     break;
   }
 }
 
-
-void setup(){
-  computeFeedback.attach(compute,T_PERIOD);
-  device.format(8,1);
-  encoder.init();
-}
-
-void loop(){
-  checkReceiveData();
-
+inline void onDataReceive(){
   if (isReadDyProtocol){
     switch (instruct)
     {
@@ -84,7 +78,6 @@ void loop(){
         trajectFb.error = 0.0;
         trajectFb.lastError = 0.0;
         trajectFb.tua = 0.0;
-
         break;
 
       default:
@@ -95,24 +88,19 @@ void loop(){
 }
 
 
-
-
-
-
-
-
-
-
-
-
+inline void setup(){
+  // computeFeedback.attach(compute,T_PERIOD);
+  device.format(8,1);
+  encoder.init();
+}
 
 int main() {
-
   setup();
-
   while(1) {
     // put your main code here, to run repeatedly:
-    loop();
+    checkReceiveData();
+    onDataReceive();
+
     // if (device.receive()){
     //   // out = 1;
     //   device.reply(device.read());
@@ -126,7 +114,8 @@ int main() {
 
     //   pc.printf("%d\n",sizeof(data)/sizeof(data[0]));
     // }
-    // pc.printf("data is %d\n",encoder.getAngleAbsolute());
+    // printf("data is %d\n",toEncoder(getAngle()));
+    // wait(0.1);
     
   }
 }

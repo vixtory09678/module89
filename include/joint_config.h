@@ -48,12 +48,18 @@ FeedbackControl trajectFb = {
 #if (JOINT_NUM == 1)
     #define JOINT_LIMIT 150
     #define SET_ZERO 523
+    #define SDA_PIN B9
+    #define SCL_PIN B8
 #elif (JOINT_NUM == 2)
     #define JOINT_LIMIT 90
     #define SET_ZERO 1630
+    #define SDA_PIN B9
+    #define SCL_PIN B8
 #elif (JOINT_NUM == 3)
     #define JOINT_LIMIT 90
     #define SET_ZERO 2715
+    #define SDA_PIN B9
+    #define SCL_PIN B8
 #endif
 
 

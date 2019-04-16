@@ -122,7 +122,7 @@ inline void onDataReceive(){
 
 inline void setup(){
 
-  // setupMotor();
+  setupMotor();
   led = 0;
   device.format(8,1);
   encoder.init();

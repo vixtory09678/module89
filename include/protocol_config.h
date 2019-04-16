@@ -5,8 +5,10 @@
 
 #define CONFIGURATION   1
 #define TRAJECTORY      2
+#define WAITING         3
 
-#define PACKET_SIZE     SIZE_DATA * 4
+#define PACKET_SIZE         SIZE_DATA * 4
+#define PACKET_CONFIG_SIZE  4
 
 SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
 DigitalOut led(PC_13);
@@ -38,17 +40,17 @@ inline void checkReceiveData(){
                 switch (instruct)
                 {
                 case CONFIGURATION:
-                    if (i < 5) {
-                        // reply to master
-                        device.reply(buffer[i]);
+                    if (i < PACKET_CONFIG_SIZE) {
                         buffer[i++] = tmp;
                     } else {
-                        int chkSm = ~(buffer[0] + buffer[1]) & 0xFF;
-                        if (chkSm == buffer[2]){
+                        int chkSm = ~(buffer[0] + buffer[1] + buffer[2] + buffer[3]) & 0xFF;
+                        if (chkSm == tmp){
                             // complete
+                            led = !led;
+                            memcpy(slave_joint1,buffer,PACKET_CONFIG_SIZE);
                             isReadDyProtocol = true;
                         }else{
-                            device.reply(11);
+                            led = 0;
                         }
                         cnt_buff = 0;
                         i = 0;
@@ -68,8 +70,7 @@ inline void checkReceiveData(){
                         if (chkSm == tmp){
                             // complete
                             led = !led;
-                            memcpy(slave_joint1,buffer,PACKET_SIZE-1);
-                            device.reply(slave_joint1[2]._coeff*10);
+                            memcpy(slave_joint1,buffer,PACKET_SIZE);
                             isReadDyProtocol = true;
                         } else {
                             led = 0;

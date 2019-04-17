@@ -3,9 +3,10 @@
 
 #include <mbed.h>
 
-#define CONFIGURATION   1
-#define TRAJECTORY      2
-#define WAITING         3
+#define CONFIGURATION       1
+#define TRAJECTORY         2
+#define WAITING            3
+
 
 #define PACKET_SIZE         SIZE_DATA * 4
 #define PACKET_CONFIG_SIZE  4
@@ -16,24 +17,22 @@ DigitalOut led(PC_13);
 uint8_t buffer[128];
 uint8_t cnt_buff = 0;
 uint8_t i = 0;
-uint8_t instruct = 0;
+int instruct = 0;
 
 bool isReadDyProtocol = false;
 
 inline void checkReceiveData(){
+    
     if (device.receive()) {
         while(device.receive()) {
-
             int tmp = device.read();
-
+            // device.reply(tmp);
             if (cnt_buff < 2) {
-                // device.reply(255);
                 if ((tmp & 0xff) == 0xff)
                     cnt_buff += 1;
                 else
                     cnt_buff = 0;
             } else if (cnt_buff < 3){
-                // device.reply(200);
                 instruct = tmp;
                 cnt_buff += 1;
             } else {
@@ -58,7 +57,6 @@ inline void checkReceiveData(){
                     break;
                 case TRAJECTORY:
                     if (i < PACKET_SIZE) {
-                        // device.reply(55);
                         buffer[i++] = tmp;
                     }else{
                         int chkSm = 0;
@@ -75,7 +73,6 @@ inline void checkReceiveData(){
                         } else {
                             led = 0;
                         }
-
                         cnt_buff = 0;
                         i = 0;
                     }

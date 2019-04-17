@@ -6,7 +6,6 @@
 
 AS5600 encoder(SDA_PIN,SCL_PIN);//SDA SCL
 Timer timeSpan;
-
 // ------------------- CONFIG --------------------------//
 // #define DEBUG
 #ifdef DEBUG
@@ -19,12 +18,15 @@ int  getAngle(){
 }
 
 float toEncoder(float degree){
+  if (degree < 0.0) degree = CONSTAIN(degree,-180,0);
+  else degree = CONSTAIN(degree,0,180);
   return (degree / 360.0) * 4095.0;
 }
 
 int indexCalculate = 0;
 
 #define T_PERIOD 0.01
+bool isReadyCalculate = false;
 inline void compute(){
   switch (instruct)
   {
@@ -63,17 +65,22 @@ inline void compute(){
   }
 }
 
-inline void state(){
+void state(){
   switch (instruct)
   {
   case CONFIGURATION:
-    // driveMotor()
-    break;
+
+      if (configFb.error > 2.0){
+        driveMotor(1, fabs(configFb.tua));
+      }else if(configFb.error < -1.0){
+        driveMotor(0, fabs(configFb.tua));
+      }else{
+        driveMotor(1, 0);
+        isReadyCalculate = false;
+      }
+      break;
+    
   case TRAJECTORY:
-
-    break;
-  case WAITING:
-
     break;
   }
 }
@@ -84,7 +91,7 @@ inline void onDataReceive(){
     {
       case CONFIGURATION:
         /* code */
-        configFb.Kp = 0.0;
+        configFb.Kp = 2.0;
         configFb.Ki = 0.0;
         configFb.Kd = 0.0;
         configFb.error = 0.0;
@@ -114,14 +121,15 @@ inline void onDataReceive(){
       default:
         break;
     }
+    isReadyCalculate = true;
+    timeSpan.reset();
     isReadDyProtocol = false;
-    timeSpan.start();
   }
 }
 
 
 inline void setup(){
-
+  timeSpan.start();
   setupMotor();
   led = 0;
   device.format(8,1);
@@ -134,6 +142,15 @@ int main() {
     // put your main code here, to run repeatedly:
     checkReceiveData();
     onDataReceive();
-    state();
+
+    if (isReadyCalculate){
+      if ( timeSpan.read_ms() > 100){
+        // compute();
+        timeSpan.reset();
+      }
+      // state();
+    }
+
+    // pc.printf("%f & %d\n",(float)getAngle()/4095.0 * 360.0 , encoder.getAngleAbsolute());
   }
 }

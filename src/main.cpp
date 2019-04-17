@@ -8,7 +8,6 @@
 #define VL53L0_I2C_SDA   PB_9
 #define VL53L0_I2C_SCL   PB_8
 
-
 MbedJSONValue dataJson;
 Serial pc(USBTX, USBRX);
 int cnt_buff = 0;
@@ -59,9 +58,10 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   unsigned char data[length];
   
   addHeader(data);
-  data[2] = 2;
+  data[2] = (size == 4) ? 1 : 2;
   data[length-1] = (unsigned char)(getCalChksm(coefficient) & 0xFF);
   memcpy(&data[3],coefficient,size);
+
   cs->write(1);
   cs->write(0);
   wait_us(50);
@@ -71,44 +71,55 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
   wait_us(50);
   cs->write(1);
 
- printf("receive -> ");
-  for (int num_coeff = 1 ; num_coeff < sizeof(data) ; num_coeff++){
-    if (num_coeff == sizeof(data) - 1){
-      printf("%d ",buff[0]);
-      num_coeff += 1;
-    } else {
-      printf("%d ",buff[num_coeff]);
-    }
-  }
-  printf("\n");
+//  printf("receive -> ");
+//   for (int num_coeff = 1 ; num_coeff < sizeof(data) ; num_coeff++){
+//     if (num_coeff == sizeof(data) - 1){
+//       printf("%d ",buff[0]);
+//       num_coeff += 1;
+//     } else {
+//       printf("%d ",buff[num_coeff]);
+//     }
+//   }
+//   printf("\n");
 }
 
 void loop(){
   
   if (flagReadSerial) {
-    parse(dataJson,buff);
 
+    parse(dataJson,buff);
     string cmd = dataJson["cmd"].get<string>();
+
     if (cmd.compare("move") == 0){
       for (int i = 0, cnt = 0 ; i < 4 ; i++){
-        for (int j = 0; j < 5 ; j++){
-          slave_joint1[cnt++]._coeff = dataJson["data"][0][i][j].get<double>();
-        }
+        for (int j = 0; j < 5 ; j++) slave_joint1[cnt++]._coeff = dataJson["data"][0][i][j].get<double>();
       }
       for (int i = 0, cnt = 0 ; i < 4 ; i++){
-        for (int j = 0; j < 5 ; j++){
-          slave_joint2[cnt++]._coeff = dataJson["data"][1][i][j].get<double>();
-        }
+        for (int j = 0; j < 5 ; j++) slave_joint2[cnt++]._coeff = dataJson["data"][1][i][j].get<double>();
       }
       for (int i = 0, cnt = 0 ; i < 4 ; i++){
-        for (int j = 0; j < 5 ; j++){
-          slave_joint3[cnt++]._coeff = dataJson["data"][2][i][j].get<double>();
-        }
+        for (int j = 0; j < 5 ; j++) slave_joint3[cnt++]._coeff = dataJson["data"][2][i][j].get<double>();
+      }
+      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+        for (int j = 0; j < 5 ; j++) slave_joint4[cnt++]._coeff = dataJson["data"][3][i][j].get<double>();
       }
 
       sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
-      // sendDataSlave(&ss2,slave_joint2,sizeof(slave_joint2));
-      // sendDataSlave(&ss3,slave_joint3,sizeof(slave_joint3));
+      sendDataSlave(&ss2,slave_joint2,sizeof(slave_joint2));
+      sendDataSlave(&ss3,slave_joint3,sizeof(slave_joint3));
+      sendDataSlave(&ss4,slave_joint4,sizeof(slave_joint4));
+
+    }else if(cmd.compare("point") == 0){
+
+      slave_joint1[0]._coeff = dataJson["data"][0].get<double>();
+      slave_joint2[0]._coeff = dataJson["data"][1].get<double>();
+      slave_joint3[0]._coeff = dataJson["data"][2].get<double>();
+      slave_joint4[0]._coeff = dataJson["data"][3].get<double>();
+
+      sendDataSlave(&ss1, slave_joint1, 4);
+      sendDataSlave(&ss2, slave_joint2, 4);
+      sendDataSlave(&ss3, slave_joint3, 4);
+      sendDataSlave(&ss4, slave_joint4, 4);
     }
     flagReadSerial = false;
   }

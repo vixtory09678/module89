@@ -1,4 +1,4 @@
-#define SIZE_DATA 20
+#define SIZE_DATA 25
 
 union PackData{
   float _coeff;

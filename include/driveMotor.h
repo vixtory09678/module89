@@ -3,7 +3,7 @@
 #include <mbed.h>
 
 #define TO_PERIOD(hz) (float)(1.0/hz)
-#define CONSTAIN(x,min,max) (x > max) ? max : (tua < min) ? min : x
+#define CONSTAIN(x,min,max) (x > max) ? max : (x < min) ? min : x
 
 DigitalOut dirPin(A15);
 PwmOut tuaPin(B3);

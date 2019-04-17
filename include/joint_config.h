@@ -3,7 +3,7 @@
 
 
 #define SIZE_DATA 25
-#define JOINT_NUM 1
+#define JOINT_NUM 3
 
 union PackData{
   float _coeff;
@@ -52,12 +52,12 @@ FeedbackControl trajectFb = {
     #define SCL_PIN B8
 #elif (JOINT_NUM == 2)
     #define JOINT_LIMIT 90
-    #define SET_ZERO 1630
+    #define SET_ZERO 1642
     #define SDA_PIN B9
     #define SCL_PIN B8
 #elif (JOINT_NUM == 3)
     #define JOINT_LIMIT 90
-    #define SET_ZERO 2715
+    #define SET_ZERO 2678
     #define SDA_PIN B9
     #define SCL_PIN B8
 #endif

@@ -3,6 +3,8 @@
 
 #include <mbed.h>
 
+// #define DEBUG
+
 #define CONFIGURATION       1
 #define TRAJECTORY         2
 #define WAITING            3
@@ -11,12 +13,14 @@
 #define PACKET_SIZE         SIZE_DATA * 4
 #define PACKET_CONFIG_SIZE  4
 
-SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
+// 
 DigitalOut led(PC_13);
 // ----------------- RECEIVE Data ----------------------//
 uint8_t buffer[128];
 uint8_t cnt_buff = 0;
 uint8_t i = 0;
+
+SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
 int instruct = 0;
 
 bool isReadDyProtocol = false;
@@ -26,7 +30,6 @@ inline void checkReceiveData(){
     if (device.receive()) {
         while(device.receive()) {
             int tmp = device.read();
-            // device.reply(tmp);
             if (cnt_buff < 2) {
                 if ((tmp & 0xff) == 0xff)
                     cnt_buff += 1;
@@ -41,12 +44,13 @@ inline void checkReceiveData(){
                 case CONFIGURATION:
                     if (i < PACKET_CONFIG_SIZE) {
                         buffer[i++] = tmp;
+                        device.reply(buffer[i-1]);
                     } else {
                         int chkSm = ~(buffer[0] + buffer[1] + buffer[2] + buffer[3]) & 0xFF;
                         if (chkSm == tmp){
                             // complete
                             led = !led;
-                            memcpy(slave_joint1,buffer,PACKET_CONFIG_SIZE);
+                            memcpy(&config,buffer,PACKET_CONFIG_SIZE);
                             isReadDyProtocol = true;
                         }else{
                             led = 0;

@@ -1,28 +1,35 @@
 #include "mbed.h"
 #include "spi_slave.h"
-#include "VL53L0X.h"
 #include "MbedJSONValue.h"
 #include <string>
 
-
-#define VL53L0_I2C_SDA   PB_9
-#define VL53L0_I2C_SCL   PB_8
+using namespace std;
 
 MbedJSONValue dataJson;
 Serial pc(USBTX, USBRX);
 int cnt_buff = 0;
 bool flagReadSerial = false;
-
 char buff[2048];
-static DevI2C devI2c(VL53L0_I2C_SDA,VL53L0_I2C_SCL);
 
-Ticker loopSender;
 SPI spi(PC_12, PC_11, PC_10); //MOSI MISO SCLK
 DigitalOut ss1(PC_5);
 DigitalOut ss2(PC_6);
 DigitalOut ss3(PC_8);
 DigitalOut ss4(PC_9);
 DigitalOut led(LED2);
+
+DigitalOut valve(PB_0);
+
+// pin status of each joint
+DigitalIn status_joint1(PA_12);
+DigitalIn status_joint2(PA_11);
+DigitalIn status_joint3(PB_12);
+DigitalIn status_joint4(PB_2);
+DigitalIn status_joint5(PB_1);
+DigitalIn status_joint6(PB_15);
+
+// pin status of limit switch box
+DigitalIn status_switch(PC_4);
 
 void onSerialEvent() {
   if (pc.readable()) {
@@ -41,92 +48,139 @@ void onSerialEvent() {
 
 
 void setup(){
-// put your setup code here, to run once:
+// spi setup
   ss1 = 1;
   spi.format(8,1);
-  spi.frequency(20000000);
+  spi.frequency(2000000);
+  
   pc.baud(115200);
   pc.attach(&onSerialEvent);
-
-  // for (int i = 0; i < SIZE_DATA ; i++){
-  //   slave_joint1[i]._coeff = 1.55;
-  // }
 }
 
-void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size){
+void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size, int mode){
   int length = size + 4;
   unsigned char data[length];
   
   addHeader(data);
-  data[2] = (size == 4) ? 1 : 2;
-  data[length-1] = (unsigned char)(getCalChksm(coefficient) & 0xFF);
+  data[2] = mode;
+  data[length-1] = (unsigned char)(getCalChksm(coefficient,size) & 0xFF);
   memcpy(&data[3],coefficient,size);
+
+  printf("size is %d\n",length);
+  for (int i = 0; i < length; i++){
+    printf("%d +",data[i]);
+  }
+  printf("\n");
 
   cs->write(1);
   cs->write(0);
   wait_us(50);
-  for (int num_coeff = 0 ; num_coeff < sizeof(data); num_coeff++){
+  for (int num_coeff = 0 ; num_coeff < length; num_coeff++){
     buff[num_coeff] = spi.write(data[num_coeff]);
   }
   wait_us(50);
   cs->write(1);
-
-//  printf("receive -> ");
-//   for (int num_coeff = 1 ; num_coeff < sizeof(data) ; num_coeff++){
-//     if (num_coeff == sizeof(data) - 1){
-//       printf("%d ",buff[0]);
-//       num_coeff += 1;
-//     } else {
-//       printf("%d ",buff[num_coeff]);
-//     }
-//   }
-//   printf("\n");
+  memset(buff,0,sizeof(buff));
 }
 
+bool flagSend = false;
 void loop(){
-  
   if (flagReadSerial) {
+    // set for ready send back to pc
+    flagSend = false;
 
     parse(dataJson,buff);
     string cmd = dataJson["cmd"].get<string>();
 
+    MbedJSONValue status;
+    status["cmd"] = "status";
+    status["data"] = "working";
+    string str = status.serialize();
+    printf("%s\r\n",str.c_str());
+
     if (cmd.compare("move") == 0){
-      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+
+      MbedJSONValue out;
+      out["cmd"] = "move";
+      out["data"] = "ok";
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
+
+
+      for (int i = 0, cnt = 0 ; i < 5 ; i++){
         for (int j = 0; j < 5 ; j++) slave_joint1[cnt++]._coeff = dataJson["data"][0][i][j].get<double>();
       }
-      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+      for (int i = 0, cnt = 0 ; i < 5 ; i++){
         for (int j = 0; j < 5 ; j++) slave_joint2[cnt++]._coeff = dataJson["data"][1][i][j].get<double>();
       }
-      for (int i = 0, cnt = 0 ; i < 4 ; i++){
+      for (int i = 0, cnt = 0 ; i < 5 ; i++){
         for (int j = 0; j < 5 ; j++) slave_joint3[cnt++]._coeff = dataJson["data"][2][i][j].get<double>();
       }
-      for (int i = 0, cnt = 0 ; i < 4 ; i++){
-        for (int j = 0; j < 5 ; j++) slave_joint4[cnt++]._coeff = dataJson["data"][3][i][j].get<double>();
+      for (int i = 3, cnt = 0; i < 6 ; i++){
+        for (int j = 0; j < 5 ; j++){
+          for (int k = 0; k < 5 ; k++) slave4[cnt++]._coeff = dataJson["data"][i][j][k].get<double>();
+        }
       }
 
-      sendDataSlave(&ss1,slave_joint1,sizeof(slave_joint1));
-      sendDataSlave(&ss2,slave_joint2,sizeof(slave_joint2));
-      sendDataSlave(&ss3,slave_joint3,sizeof(slave_joint3));
-      sendDataSlave(&ss4,slave_joint4,sizeof(slave_joint4));
+      sendDataSlave(&ss1, slave_joint1, sizeof(slave_joint1), TRAJECTORY);
+      sendDataSlave(&ss2, slave_joint2, sizeof(slave_joint2), TRAJECTORY);
+      sendDataSlave(&ss3, slave_joint3, sizeof(slave_joint3), TRAJECTORY);
+      sendDataSlave(&ss4, slave4, sizeof(slave4), TRAJECTORY);
+      printf("send ok\n");
+
+      
 
     }else if(cmd.compare("point") == 0){
+
+      MbedJSONValue out;
+      out["cmd"] = "point";
+      out["data"] = "ok";
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
 
       slave_joint1[0]._coeff = dataJson["data"][0].get<double>();
       slave_joint2[0]._coeff = dataJson["data"][1].get<double>();
       slave_joint3[0]._coeff = dataJson["data"][2].get<double>();
-      slave_joint4[0]._coeff = dataJson["data"][3].get<double>();
 
-      sendDataSlave(&ss1, slave_joint1, 4);
-      sendDataSlave(&ss2, slave_joint2, 4);
-      sendDataSlave(&ss3, slave_joint3, 4);
-      sendDataSlave(&ss4, slave_joint4, 4);
+      for (int i = 0; i < 3 ; i++){
+        slave4[i]._coeff = dataJson["data"][i+3].get<double>();
+      }
+
+      sendDataSlave(&ss1, slave_joint1, 4, CONFIGURATION);
+      sendDataSlave(&ss2, slave_joint2, 4, CONFIGURATION);
+      sendDataSlave(&ss3, slave_joint3, 4, CONFIGURATION);
+      sendDataSlave(&ss4, slave4, 12, CONFIGURATION);
+      
+    }else if(cmd.compare("switch_box") == 0){
+      // Do something
+    }else if(cmd.compare("relay") == 0){
+      valve = dataJson["data"].get<int>();
+      MbedJSONValue out;
+      out["cmd"] = "relay";
+      out["data"] = "ok";
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
     }
     flagReadSerial = false;
+
+    // clear array
+    memset(buff,0,sizeof(buff));
   }
-  // led = 1;
-  // wait(0.5);
-  // led = 0;
-  // wait(0.5);
+
+  // if (status_joint1 &&
+  //       status_joint2 &&
+  //       status_joint3 &&
+  //       status_joint4 &&
+  //       status_joint5 &&
+  //       status_joint6){
+  //   if (!flagSend) {
+  //     flagSend = true;
+  //     MbedJSONValue status;
+  //     status["cmd"] = "status";
+  //     status["data"] = "not_working";
+  //     printData(status);
+  //   }
+  // }
 }
 
 

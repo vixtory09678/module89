@@ -26,7 +26,7 @@ typedef struct _feedback{
 
 #if (JOINT_NUM == 1)
     #define JOINT_LIMIT 150
-    #define SET_ZERO 1576
+    #define SET_ZERO 1545
     #define SDA_PIN B9
     #define SCL_PIN B8
     #define INVERSE -1
@@ -39,8 +39,8 @@ typedef struct _feedback{
 #elif (JOINT_NUM == 2)
     #define JOINT_LIMIT 90
     #define SET_ZERO 1648
-    #define SDA_PIN B9
-    #define SCL_PIN B8
+    #define SDA_PIN B11
+    #define SCL_PIN B10
     #define INVERSE 1
     #define DIR_JOINT 0
     #define LIMIT_MIN_TUA 10.0f
@@ -50,7 +50,7 @@ typedef struct _feedback{
     #define KD 0.0
 #elif (JOINT_NUM == 3)
     #define JOINT_LIMIT 90
-    #define SET_ZERO 1299
+    #define SET_ZERO 890
     #define SDA_PIN B9
     #define SCL_PIN B8
     #define INVERSE -1

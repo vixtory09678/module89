@@ -7,7 +7,7 @@
 
 AS5600::AS5600(PinName sda, PinName scl) : i2c(sda,scl) {
     addresse=0x36;
-    i2c.frequency(400000);
+    i2c.frequency(100000);
 }
 int AS5600::isMagnetPresent() {
     char cmd=0x0B,data=0,value=0;
@@ -51,7 +51,7 @@ char AS5600::read(char address) {
 }
 
 void AS5600::init() {
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10; i++)
         this->setZero();
 }
 

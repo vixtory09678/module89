@@ -22,6 +22,8 @@ uint8_t i = 0;
 
 SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
 int instruct = 0;
+int size_packet = 0;
+int size_coeff = 0;
 
 bool isReadDyProtocol = false;
 
@@ -38,11 +40,14 @@ inline void checkReceiveData(){
             } else if (cnt_buff < 3){
                 instruct = tmp;
                 cnt_buff += 1;
+            } else if (cnt_buff < 4){
+                size_packet = tmp;
+                cnt_buff += 1;
             } else {
                 switch (instruct)
                 {
                 case CONFIGURATION:
-                    if (i < PACKET_CONFIG_SIZE) {
+                    if (i < size_packet) {
                         buffer[i++] = tmp;
                         device.reply(buffer[i-1]);
                     } else {
@@ -50,8 +55,9 @@ inline void checkReceiveData(){
                         if (chkSm == tmp){
                             // complete
                             led = !led;
-                            memcpy(&config,buffer,PACKET_CONFIG_SIZE);
+                            memcpy(&config, buffer, size_packet);
                             isReadDyProtocol = true;
+                            size_coeff = size_packet / 4;
                         }else{
                             led = 0;
                         }
@@ -60,11 +66,11 @@ inline void checkReceiveData(){
                     }
                     break;
                 case TRAJECTORY:
-                    if (i < PACKET_SIZE) {
+                    if (i < size_packet) {
                         buffer[i++] = tmp;
                     }else{
                         int chkSm = 0;
-                        for (int n = 0; n < PACKET_SIZE; n++) {
+                        for (int n = 0; n < size_packet; n++) {
                             chkSm += buffer[n];
                         }
                         chkSm = (~chkSm) & 0xFF;
@@ -72,8 +78,9 @@ inline void checkReceiveData(){
                         if (chkSm == tmp){
                             // complete
                             led = !led;
-                            memcpy(slave_joint1,buffer,PACKET_SIZE);
+                            memcpy(slave_joint1, buffer, size_packet);
                             isReadDyProtocol = true;
+                            size_coeff = size_packet / 4;
                         } else {
                             led = 0;
                         }

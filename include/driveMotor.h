@@ -7,20 +7,20 @@
 #define CONSTAIN(x,min,max) (x > max) ? max : (x < min) ? min : x
 
 DigitalOut dirPin(A15);
-PwmOut tuaPin(B3);
+PwmOut tauPin(B3);
 
-inline void driveMotor(int direction, float tua){
+inline void driveMotor(int direction, float tau){
     dirPin.write(direction);
-    if(tua != 0)
-        tua = CONSTAIN(tua, 5, 60);
+    if(tau != 0)
+        tau = CONSTAIN(tau, 5, 60);
     else
-        tua = 0.0;
-    tuaPin.write(tua/100.0);
+        tau = 0.0;
+    tauPin.write(tau/100.0);
 }
 inline void setupMotor(){
     dirPin = 0;
-    tuaPin.period(TO_PERIOD(500));
-    tuaPin.write(0.0);
+    tauPin.period(TO_PERIOD(500));
+    tauPin.write(0.0);
 }
 
 #endif

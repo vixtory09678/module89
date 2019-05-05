@@ -189,8 +189,6 @@ inline void setup(){
   timeSpan.start();
   setupMotor();
   device.format(8,1);
-  // encoder.init();
-  // pc.printf("system cock %d\n",SystemCoreClock);
   wait(1);
   led = 0;
 }

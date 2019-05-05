@@ -2,17 +2,22 @@
 #include "joint_config.h"
 #include "protocol_config.h"
 
+
 #include "driveMotor.h"
 #include <AS5600.h>
-AS5600 encoder(SDA_PIN,SCL_PIN);//SDA SCL
 
-int sensor = 0;
-int  getAngle(){
-  return ((encoder.getAngleAbsolute() + (2047 - SET_ZERO)) % 4096) - 2047;
+AS5600 encoder(SDA_PIN,SCL_PIN,HZ_ENCODER);  // SDA SCL
+DigitalIn slaveCmdPin(PA_4);      // pin check on SPI active communication
+DigitalOut pinStatus(PB_4);
+
+int absAngle = 0;
+
+long getAngle(int angle){
+  return ((angle + (2047 - SET_ZERO)) % 4096) - 2047;
 }
 
 Timer timeSpan;
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 Serial pc(A9,A10);
@@ -24,8 +29,6 @@ Serial pc(A9,A10);
 #endif
 // ----------------- END CONFIG ------------------------//
 float toEncoder(float degree){
-  if (degree < 0.0) degree = CONSTAIN(degree,-180,0);
-  else degree = CONSTAIN(degree,0,180);
   return (degree / 360.0) * 4095.0;
 }
 
@@ -35,52 +38,71 @@ bool isReadyCalculate = false;
 #define T_PERIOD 0.01
 
 inline void compute(){
+  absAngle = encoder.getAngleAbsolute();
+  float computeAngle = (float)getAngle(absAngle)*INVERSE/4095.0 * 360.0 ;
+  
 
-  // if(!encoder.isMagnetPresent()) {
-  //   while(true);
-  // }
+  if(!encoder.isMagnetPresent()) {
+    configFb.tau = 0.0;
+    isReadyCalculate = false;
+    #ifdef DEBUG
+    pc.printf("***encoder error***\n");
+    #endif
+    return;
+  }
+
+  #ifdef DEBUG
+  pc.printf("%f & %d error %f : setpoint %f\n",computeAngle , absAngle, configFb.error, toEncoder(config._coeff));
+  #endif
+
 
   switch (instruct)
   {
   case CONFIGURATION:
-    sensor = getAngle() * INVERSE;
-    configFb.error = toEncoder(config._coeff) - sensor;
-    configFb.tua = configFb.Kp * (configFb.error)
+    configFb.error = config._coeff - (computeAngle);
+    configFb.tau = configFb.Kp * (configFb.error)
                     + configFb.Kd * ((configFb.error - configFb.lastError) / T_PERIOD);
     configFb.lastError = configFb.error;
+
     break;
 
   case TRAJECTORY:
 
     trajectFb.time += T_PERIOD;
-
     float t = trajectFb.time;
     float tp2 = pow(trajectFb.time,2.0);
     float tp3 = pow(trajectFb.time,3.0);
 
-    float q_ref = slave_joint1[indexCalculate]._coeff +                          // c0
-                  slave_joint1[indexCalculate + 1]._coeff * t+                   // c1 * t
-                  slave_joint1[indexCalculate + 2]._coeff * tp2+                 // c2 * t^2
-                  slave_joint1[indexCalculate + 3]._coeff * tp3;                 // c3 * t^3
+    float q_ref = slave_joint1[indexCalculate]._coeff +                           // c0
+                  slave_joint1[indexCalculate + 1]._coeff * t +                   // c1 * t
+                  slave_joint1[indexCalculate + 2]._coeff * tp2 +                 // c2 * t^2
+                  slave_joint1[indexCalculate + 3]._coeff * tp3;                  // c3 * t^3
 
     float q_dot_ref = slave_joint1[indexCalculate + 1]._coeff +                   // c1
                     (2.0 * slave_joint1[indexCalculate + 2]._coeff * t)+          // 2 * c2 * t
                     (3.0 * slave_joint1[indexCalculate + 3]._coeff * tp2);        // 3 * c3 * t^2
 
-    trajectFb.error = toEncoder(q_ref) - (getAngle() * INVERSE);
+    trajectFb.error = toEncoder(q_ref) - (getAngle(absAngle) * INVERSE);
 
+    /*
+    5 column
+    [c0, c1, c2, c3, T],
+    [c0, c1, c2, c3, T],
+    [c0, c1, c2, c3, T],
+    */
     if (trajectFb.time >= slave_joint1[indexCalculate + 4]._coeff){
-      if (indexCalculate < 20){
-        trajectFb.time = 0.0;
+      if ( indexCalculate < (20) ){  // size_coeff - 5
+        trajectFb.time = 0.0f;  // reset time for calcute new index
         indexCalculate += 5;
       }
-    } else {
-      trajectFb.tua = trajectFb.Kp * (trajectFb.error)
-                    + trajectFb.Kd * ((q_dot_ref - trajectFb.error - trajectFb.lastError) / T_PERIOD);
+    } else {                                                                      // tau = Kp(q_ref-q) + Kd(q_dot_ref - q_dot)
+      trajectFb.tau = trajectFb.Kp * (trajectFb.error)
+                    + trajectFb.Kd * (q_dot_ref - (trajectFb.error - trajectFb.lastError) / T_PERIOD);
       trajectFb.lastError = trajectFb.error;
     }
     break;
   }
+  
 }
 
 
@@ -89,30 +111,33 @@ void state(){
   switch (instruct)
   {
   case CONFIGURATION:
-      if (configFb.error > 2.0){
-        driveMotor(DIR_JOINT, fabs(configFb.tua));
-      }else if(configFb.error < -2.0){
-        driveMotor((!DIR_JOINT), fabs(configFb.tua));
+      if (configFb.error > 0.3){
+        driveMotor(DIR_JOINT, fabs(configFb.tau));
+      }else if(configFb.error < -0.3){
+        driveMotor((!DIR_JOINT), fabs(configFb.tau));
       }else{
         driveMotor(0, 0);
         isReadyCalculate = false;
+        pinStatus = 0;
       }
       break;
   
   case TRAJECTORY:
 
-      if (trajectFb.error > 2.0) {
-        driveMotor(DIR_JOINT, fabs(trajectFb.tua));
-      }else if(trajectFb.error < -2.0){
-        driveMotor((!DIR_JOINT), fabs(trajectFb.tua));
+      if (trajectFb.error > 0.3) {
+        driveMotor(DIR_JOINT, fabs(trajectFb.tau));
+      }else if(trajectFb.error < -0.3){
+        driveMotor((!DIR_JOINT), fabs(trajectFb.tau));
       }else{
-        driveMotor(1,0);
+        driveMotor(0, 0);
         isReadyCalculate = false;
+        pinStatus = 0;
       }
     break;
   default:
     driveMotor(0,0);
     isReadyCalculate = false;
+    pinStatus = 0;
   }
 }
 
@@ -124,8 +149,8 @@ inline void onDataReceive(){
         /* code */
         configFb.error = 0.0;
         configFb.lastError = 0.0;
-        configFb.tua = 0.0;
-
+        configFb.tau = 0.0;
+        
         #ifdef DEBUG
         pc.printf("con %f\n",config._coeff);
         #endif
@@ -135,8 +160,10 @@ inline void onDataReceive(){
         /* code */
         trajectFb.error = 0.0;
         trajectFb.lastError = 0.0;
-        trajectFb.tua = 0.0;
+        trajectFb.tau = 0.0;
         trajectFb.time = 0.0;
+
+        indexCalculate = 0; // set index calculate trajectory to home
 
         #ifdef DEBUG
         pc.printf("tra %f\n",slave_joint1[3]._coeff);
@@ -149,6 +176,7 @@ inline void onDataReceive(){
     }
     compute();
     isReadyCalculate = true;
+    pinStatus = 1;
     timeSpan.reset();
     isReadDyProtocol = false;
   }
@@ -157,10 +185,12 @@ inline void onDataReceive(){
 
 inline void setup(){
   led = 1;
+  pinStatus = 0;
   timeSpan.start();
   setupMotor();
   device.format(8,1);
-  encoder.init();
+  // encoder.init();
+  // pc.printf("system cock %d\n",SystemCoreClock);
   wait(1);
   led = 0;
 }
@@ -175,19 +205,23 @@ int main() {
     checkReceiveData();
     onDataReceive();
 
+    // add new feature if SPI is inactive the system is working
+    // if (slaveCmdPin == 1) {
+    //   state();
+    // }
+
     if (isReadyCalculate){
       if ( timeSpan.read_ms() > 10) {
         compute();
         led = !led;
-    //     #ifdef DEBUG
-    //     pc.printf("%f & %f\n",(float)getAngle()*INVERSE/4095.0 * 360.0 , encoder.getAngleAbsolute());
-    //     #endif
         timeSpan.reset();
       }
       state();
     }
+
     #else
-    pc.printf("%f & %d\n",(float)getAngle()*INVERSE/4095.0 * 360.0 , encoder.getAngleAbsolute());
+    absAngle = encoder.getAngleAbsolute();
+    pc.printf("%f & %d\n",(float)getAngle(absAngle)*INVERSE/4095.0 * 360.0 , absAngle);
     wait_ms(10);
     #endif
 

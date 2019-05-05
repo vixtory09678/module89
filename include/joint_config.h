@@ -19,7 +19,7 @@ typedef struct _feedback{
 
   float error;
   float lastError;
-  float tua;
+  float tau;
 
   float time;
 }FeedbackControl;
@@ -27,15 +27,14 @@ typedef struct _feedback{
 #if (JOINT_NUM == 1)
     #define JOINT_LIMIT 150
     #define SET_ZERO 1545
-    #define SDA_PIN B9
-    #define SCL_PIN B8
+    #define SDA_PIN B11
+    #define SCL_PIN B10
     #define INVERSE -1
     #define DIR_JOINT 1
-    #define LIMIT_MIN_TUA 2000.0f
-    #define LIMIT_MAX_TUA 10000.0f
-    #define KP 1.0
+    #define KP 5.5
     #define KI 0.0
-    #define KD 0.0
+    #define KD 0.75
+    #define HZ_ENCODER 100000
 #elif (JOINT_NUM == 2)
     #define JOINT_LIMIT 90
     #define SET_ZERO 1648
@@ -43,23 +42,21 @@ typedef struct _feedback{
     #define SCL_PIN B10
     #define INVERSE 1
     #define DIR_JOINT 0
-    #define LIMIT_MIN_TUA 10.0f
-    #define LIMIT_MAX_TUA 500.0f
-    #define KP 1.0
+    #define KP 3.0
     #define KI 0.0
-    #define KD 0.0
+    #define KD 2.0
+    #define HZ_ENCODER 100000
 #elif (JOINT_NUM == 3)
     #define JOINT_LIMIT 90
-    #define SET_ZERO 890
-    #define SDA_PIN B9
-    #define SCL_PIN B8
+    #define SET_ZERO 879
+    #define SDA_PIN B11
+    #define SCL_PIN B10
     #define INVERSE -1
     #define DIR_JOINT 0
-    #define LIMIT_MIN_TUA 2000.0f
-    #define LIMIT_MAX_TUA 10000.0f
-    #define KP 6.0
+    #define KP 4.0
     #define KI 0.0
-    #define KD 1.0
+    #define KD 2.0
+    #define HZ_ENCODER 100000
 #endif
 
 FeedbackControl configFb = {

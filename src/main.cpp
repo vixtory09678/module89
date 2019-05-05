@@ -29,7 +29,8 @@ DigitalIn status_joint5(PB_1);
 DigitalIn status_joint6(PB_15);
 
 // pin status of limit switch box
-DigitalIn status_switch(PC_4);
+// DigitalIn status_switch(PA_4);
+AnalogIn status_switch(PA_4);
 
 void onSerialEvent() {
   if (pc.readable()) {
@@ -51,7 +52,7 @@ void setup(){
 // spi setup
   ss1 = 1;
   spi.format(8,1);
-  spi.frequency(2000000);
+  spi.frequency(2250000);
   
   pc.baud(115200);
   pc.attach(&onSerialEvent);
@@ -84,7 +85,13 @@ void sendDataSlave(DigitalOut *cs, PackData coefficient[], int size, int mode){
 }
 
 bool flagSend = false;
+bool flagReadBoxSwitch = false;
 void loop(){
+
+  // printf("data is %d \n",status_switch.read_u16());
+  
+  // wait(0.2);
+
   if (flagReadSerial) {
     // set for ready send back to pc
     flagSend = false;
@@ -92,17 +99,17 @@ void loop(){
     parse(dataJson,buff);
     string cmd = dataJson["cmd"].get<string>();
 
-    MbedJSONValue status;
-    status["cmd"] = "status";
-    status["data"] = "working";
-    string str = status.serialize();
-    printf("%s\r\n",str.c_str());
+    // MbedJSONValue status;
+    // status["cmd"] = "status";
+    // status["data"] = "working";
+    // string str = status.serialize();
+    // printf("%s\r\n",str.c_str());
 
     if (cmd.compare("move") == 0){
 
       MbedJSONValue out;
-      out["cmd"] = "move";
-      out["data"] = "ok";
+      out["cmd"] = "status";
+      out["data"] = "working";
       string strOut = out.serialize();
       printf("%s\r\n",strOut.c_str());
 
@@ -120,7 +127,7 @@ void loop(){
         for (int j = 0; j < 5 ; j++){
           for (int k = 0; k < 5 ; k++) slave4[cnt++]._coeff = dataJson["data"][i][j][k].get<double>();
         }
-      }
+      }   
 
       sendDataSlave(&ss1, slave_joint1, sizeof(slave_joint1), TRAJECTORY);
       sendDataSlave(&ss2, slave_joint2, sizeof(slave_joint2), TRAJECTORY);
@@ -133,8 +140,8 @@ void loop(){
     }else if(cmd.compare("point") == 0){
 
       MbedJSONValue out;
-      out["cmd"] = "point";
-      out["data"] = "ok";
+      out["cmd"] = "status";
+      out["data"] = "working";
       string strOut = out.serialize();
       printf("%s\r\n",strOut.c_str());
 
@@ -155,6 +162,7 @@ void loop(){
       // Do something
     }else if(cmd.compare("relay") == 0){
       valve = dataJson["data"].get<int>();
+
       MbedJSONValue out;
       out["cmd"] = "relay";
       out["data"] = "ok";
@@ -167,20 +175,47 @@ void loop(){
     memset(buff,0,sizeof(buff));
   }
 
-  // if (status_joint1 &&
-  //       status_joint2 &&
-  //       status_joint3 &&
-  //       status_joint4 &&
-  //       status_joint5 &&
-  //       status_joint6){
-  //   if (!flagSend) {
-  //     flagSend = true;
-  //     MbedJSONValue status;
-  //     status["cmd"] = "status";
-  //     status["data"] = "not_working";
-  //     printData(status);
-  //   }
-  // }
+  if (status_switch.read_u16() > 40000){
+    if (!flagReadBoxSwitch){
+
+      MbedJSONValue out;
+      out["cmd"] = "switch_box";
+      out["data"] = 1;
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
+
+      flagReadBoxSwitch = true;
+    }
+  }else{
+    if (flagReadBoxSwitch) {
+
+      MbedJSONValue out;
+      out["cmd"] = "switch_box";
+      out["data"] = 0;
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
+
+      flagReadBoxSwitch = false;
+    }
+  }
+
+  if (status_joint1 &&
+        status_joint2 &&
+        status_joint3 &&
+        status_joint4 &&
+        status_joint5 &&
+        status_joint6){
+    if (!flagSend) {
+      flagSend = true;
+
+      MbedJSONValue out;
+      out["cmd"] = "status";
+      out["data"] = "not_working";
+      string strOut = out.serialize();
+      printf("%s\r\n",strOut.c_str());
+
+    }
+  }
 }
 
 

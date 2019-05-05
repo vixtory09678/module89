@@ -5,10 +5,11 @@
 
 
 
-AS5600::AS5600(PinName sda, PinName scl) : i2c(sda,scl) {
+AS5600::AS5600(PinName sda, PinName scl,int hz) : i2c(sda,scl) {
     addresse=0x36;
-    i2c.frequency(100000);
+    i2c.frequency(hz);
 }
+
 int AS5600::isMagnetPresent() {
     char cmd=0x0B,data=0,value=0;
     data=this->read(cmd);
@@ -28,19 +29,19 @@ int AS5600::getAngleAbsolute() {
     return data;
 }
 
-int AS5600::getAngleRelative() {
-    return ((this->getAngleAbsolute() + (2047 - relative_zero)) % 4096) - 2047;
-}
+// int AS5600::getAngleRelative() {
+//     return ((this->getAngleAbsolute() + (2047 - relative_zero)) % 4096) - 2047;
+// }
 
 
-float AS5600::getAngleDegrees() {
-    return ((float)this->getAngleRelative() * 180) / 2048 ;
-}
+// float AS5600::getAngleDegrees() {
+//     return ((float)this->getAngleRelative() * 180) / 2048 ;
+// }
 
-void AS5600::setZero() {
-    relative_zero = 0;
-    relative_zero = this->getAngleAbsolute();
-}
+// void AS5600::setZero() {
+//     relative_zero = 0;
+//     relative_zero = this->getAngleAbsolute();
+// }
 
 
 char AS5600::read(char address) {
@@ -50,35 +51,35 @@ char AS5600::read(char address) {
     return retval;
 }
 
-void AS5600::init() {
-    for (int i = 0; i < 10; i++)
-        this->setZero();
-}
+// void AS5600::init() {
+//     for (int i = 0; i < 10; i++)
+//         this->setZero();
+// }
 
-float AS5600::getAngleMinMax(float angleMax) {
-    static unsigned char etat=0;           // etat de l'automate
-    static int anglePrec=0;                // angle precedent
-    float angle=0;                         // angle courant
-    float angleX=0;                        //angle en sortie borne
-    //
-    angle=this->getAngleDegrees();         // lecture de l'angle courant
-    switch(etat) {
-        case 0 :    // angle compris entre min et max
-            angleX = angle;
-            if(angle > angleMax)  etat = 2;
-            if(angle < -angleMax) etat = 1;
-            break;
-        case 1 :    // angle inferieur a -max
-            angleX = -angleMax;
-            if((anglePrec <= -angleMax) && (angle >= -angleMax) && (angle < 0)) etat = 0;
-            break;
-        case 2 :
-            angleX = angleMax;
-            if((anglePrec >=  angleMax) && (angle <= angleMax) && (angle > 0))etat = 0;
-            break;
-        default :
-            break;
-    }
-    anglePrec=angle;
-    return angleX;
-}
+// float AS5600::getAngleMinMax(float angleMax) {
+//     static unsigned char etat=0;           // etat de l'automate
+//     static int anglePrec=0;                // angle precedent
+//     float angle=0;                         // angle courant
+//     float angleX=0;                        //angle en sortie borne
+//     //
+//     angle=this->getAngleDegrees();         // lecture de l'angle courant
+//     switch(etat) {
+//         case 0 :    // angle compris entre min et max
+//             angleX = angle;
+//             if(angle > angleMax)  etat = 2;
+//             if(angle < -angleMax) etat = 1;
+//             break;
+//         case 1 :    // angle inferieur a -max
+//             angleX = -angleMax;
+//             if((anglePrec <= -angleMax) && (angle >= -angleMax) && (angle < 0)) etat = 0;
+//             break;
+//         case 2 :
+//             angleX = angleMax;
+//             if((anglePrec >=  angleMax) && (angle <= angleMax) && (angle > 0))etat = 0;
+//             break;
+//         default :
+//             break;
+//     }
+//     anglePrec=angle;
+//     return angleX;
+// }

@@ -38,13 +38,25 @@ class Manual_Path:
             if (self.callHome):
                 self.callHome()
 
+    def readRaw(self, str):
+        print ("raw " + str)
+
+    def readTimeOut(self, process):
+        print("reset time is " + str(process.process_time))
+        self.pro.send({"cmd":"reset","data":[1,1,1]})
+        time.sleep(1)
+        self.pro.send(self.data[self.index])
+
     def __init__(self, port):
         self.pro = Protocol(port)
         # pro.on('raw',readRawSerial)
         self.pro.setDebugMode(True)
-        self.pro.on('status',self.readStatus)
-        self.pro.on('switch_box',self.readSwitch)
-        self.pro.on('relay',self.readRelay)
+        self.pro.setTimeoutProcess(6.5)
+        self.pro.on('raw',self.readRaw)
+        self.pro.on('status', self.readStatus)
+        self.pro.on('switch_box', self.readSwitch)
+        self.pro.on('relay', self.readRelay)
+        self.pro.on('process_timeout', self.readTimeOut)
 
         self.callHome = None
         self.callReadSwitch = None

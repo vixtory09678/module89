@@ -12,7 +12,7 @@ class AS5600 {
     // float getAngleMinMax(float angleMax);
 
     int isMagnetPresent();
-
+    
     // void init();
     // void setZero();
 

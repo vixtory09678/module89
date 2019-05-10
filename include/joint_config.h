@@ -3,12 +3,13 @@
 
 
 #define SIZE_DATA 25
-#define JOINT_NUM 3
+#define JOINT_NUM 1
 
 union PackData{
   float _coeff;
   uint8_t _coeff_bytes[4];
 };
+
 PackData slave_joint1[SIZE_DATA];
 PackData config;
 
@@ -31,9 +32,9 @@ typedef struct _feedback{
     #define SCL_PIN B10
     #define INVERSE -1
     #define DIR_JOINT 1
-    #define KP 5.5
-    #define KI 0.0
-    #define KD 0.75
+    #define KP_UP 8.0
+    #define KI_UP 0.0
+    #define KD_UP 1.5
     #define HZ_ENCODER 100000
 #elif (JOINT_NUM == 2)
     #define JOINT_LIMIT 90
@@ -42,28 +43,38 @@ typedef struct _feedback{
     #define SCL_PIN B10
     #define INVERSE 1
     #define DIR_JOINT 0
-    #define KP 3.0
-    #define KI 0.0
-    #define KD 2.0
+
+    #define KP_UP 5.0
+    #define KI_UP 0.0
+    #define KD_UP 1.0
+
+    #define KP_DOWN 5.0
+    #define KI_DOWN 0.0
+    #define KD_DOWN 0.0
     #define HZ_ENCODER 100000
 #elif (JOINT_NUM == 3)
     #define JOINT_LIMIT 90
-    #define SET_ZERO 879
+    #define SET_ZERO 857
     #define SDA_PIN B11
     #define SCL_PIN B10
     #define INVERSE -1
     #define DIR_JOINT 0
-    #define KP 4.0
-    #define KI 0.0
-    #define KD 2.0
+    
+    #define KP_UP 8.0
+    #define KI_UP 0.0
+    #define KD_UP 2.0
+
+    #define KP_DOWN 5.0
+    #define KI_DOWN 0.0
+    #define KD_DOWN 2.0
     #define HZ_ENCODER 100000
 #endif
 
 FeedbackControl configFb = {
-  KP,     // Kp
-  KI,     // Ki
-  KD,     // Kd
-  
+  KP_UP,     // Kp
+  KI_UP,     // Ki
+  KD_UP,     // Kd
+
   0.0f,     // error
   0.0f,     // lastError
   0.0f,     // tua
@@ -71,9 +82,9 @@ FeedbackControl configFb = {
 };
 
 FeedbackControl trajectFb = {
-  KP,     // Kp
-  KI,     // Ki
-  KD,     // Kd
+  KP_UP,     // Kp
+  KI_UP,     // Ki
+  KD_UP,     // Kd
 
   0.0f,     // error
   0.0f,     // lastError

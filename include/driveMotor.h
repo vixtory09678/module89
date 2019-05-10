@@ -12,7 +12,13 @@ PwmOut tauPin(B3);
 inline void driveMotor(int direction, float tau){
     dirPin.write(direction);
     if(tau != 0)
-        tau = CONSTAIN(tau, 5, 60);
+        #if JOINT_NUM == 1
+            tau = CONSTAIN(tau, 5, 100);
+        #elif JOINT_NUM == 2
+            tau = CONSTAIN(tau, 5, 40);
+        #elif JOINT_NUM == 3
+            tau = CONSTAIN(tau, 10, 50);
+        #endif
     else
         tau = 0.0;
     tauPin.write(tau/100.0);

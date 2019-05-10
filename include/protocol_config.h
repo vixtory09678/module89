@@ -13,7 +13,7 @@
 #define PACKET_SIZE         SIZE_DATA * 4
 #define PACKET_CONFIG_SIZE  4
 
-// 
+//
 DigitalOut led(PC_13);
 // ----------------- RECEIVE Data ----------------------//
 uint8_t buffer[128];
@@ -22,12 +22,13 @@ uint8_t i = 0;
 
 SPISlave device(A7,A6,A5,A4); // mosi, miso, sclk, ssel
 int instruct = 0;
-
 bool isReadDyProtocol = false;
 
 inline void checkReceiveData(){
 
     if (device.receive()) {
+        // config before data receive loop
+
         while(device.receive()) {
             int tmp = device.read();
             if (cnt_buff < 2) {

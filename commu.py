@@ -36,6 +36,8 @@ class Protocol(object):
         self.TIMEOUT = 6.0
         self.isStartTimer = False
 
+        
+
     def __del__(self):
         if (self.thread.isAlive()):
             self.thread.join()

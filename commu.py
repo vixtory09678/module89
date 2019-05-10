@@ -34,7 +34,7 @@ class Protocol(object):
         self.startTime = 0.0
         self.endTime = 0.0
         self.TIMEOUT = 6.0
-        # self.isStartTimer = False
+        self.isStartTimer = False
 
     def __del__(self):
         if (self.thread.isAlive()):
@@ -44,6 +44,9 @@ class Protocol(object):
 
     def setDebugMode(self,debug):
         self.debug = debug
+
+    def setTimeoutProcess(self, time_out):
+        self.TIMEOUT = time_out
 
     def on(self,mode='read',call = None):
         if (mode == 'raw'):
@@ -90,14 +93,15 @@ class Protocol(object):
                         if jsonObj["data"] == "working":
                             self.startTime = time.time()
                             self.process.process_time = 0
-                            # self.isStartTimer = True
+                            self.isStartTimer = True
                         if jsonObj["data"] == "all stop":
                             self.endTime = time.time() - self.startTime
                             self.process.process_time = self.endTime
-                            # self.isStartTimer = False
+                            print("process time is " + str(self.process.process_time))
+                            self.isStartTimer = False
 
 
-                        self.callStatus(jsonObj["data"], self.process)
+                        self.callStatus(jsonObj["data"])
 
 
                 elif (jsonObj["cmd"] == 'relay'):
@@ -107,11 +111,12 @@ class Protocol(object):
                     if (self.callSwitch):
                         self.callSwitch(jsonObj["data"])
             
-            # if (self.isStartTimer == True):
-            #     if (time.time() - self.startTime) > self.TIMEOUT :
-            #         if (self.callProcessTimeOut):
-            #             self.callProcessTimeOut(self.process)
-            #             self.isStartTimer = False
+            if (self.isStartTimer == True):
+                if (time.time() - self.startTime) > self.TIMEOUT :
+                    if (self.callProcessTimeOut):
+                        self.process.process_time = time.time() - self.startTime
+                        self.callProcessTimeOut(self.process)
+                        self.isStartTimer = False
   
 
     def send(self, data):

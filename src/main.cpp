@@ -8,30 +8,31 @@ PwmOut servo_joint[3] = {PwmOut(B0), PwmOut(A11), PwmOut(B4)};
 bool flagComplete[3] = {false,false,false};
 
 const int PERIOD_CONS_ARR[3] = {20, 3333, 20};
-const int MIN_POSITION[3] = {2500, 2200, 2400};
-const int MID_POSITION[3] = {1500, 1500, 1500};
-const int MAX_POSITION[3] = {550, 820, 550};
+const int MIN_POSITION[3] = {2500, 2450, 1150};
+const int MID_POSITION[3] = {2200, 1725, 1850};
+const int MAX_POSITION[3] = {2200, 1000, 2550};
 
 
 
 DigitalIn slaveCmdPin(PA_4);
 
-DigitalOut pinStatus[3] = { DigitalOut(B9), DigitalOut(B8), DigitalOut(B5) };
+DigitalOut pinStatus[3] = { DigitalOut(B12), DigitalOut(B13), DigitalOut(B14) };
 
 Timer timeSpan;
 Timer controlServo;
 Timer print;
 // ------------------- CONFIG --------------------------//
-#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 int position[3] = {MID_POSITION[0], MID_POSITION[1], MID_POSITION[2]};
 Serial pc(A9,A10);
 #else
-int position[3] = {MID_POSITION[0], MIN_POSITION[1], MID_POSITION[2]};
+int position[3] = {MID_POSITION[0], MID_POSITION[1], MIN_POSITION[2]};
 #endif
+
 // #define DEBUG_COMPUTE
 #ifdef DEBUG_COMPUTE
-Serial pc(A9,A10);
+// Serial pc(A9,A10);
 #endif
 // ----------------- END CONFIG ------------------------//
 
@@ -45,12 +46,13 @@ float getAngle(int joint_i){
 }
 
 float toPosition(float angle, int joint_i){
-  if (joint_i != 1){
+  if (joint_i == 0){
     return map(angle, -90.0f, 90.0f, MAX_POSITION[joint_i], MIN_POSITION[joint_i]);
+  }else if(joint_i == 1){
+    return map(angle, -90.0f, 90.0f, MIN_POSITION[joint_i], MAX_POSITION[joint_i]);
   }else{
     return map(angle, 0.0f, 180.0f, MIN_POSITION[joint_i], MAX_POSITION[joint_i]);
   }
-  
 }
 
 inline void compute(){
@@ -113,7 +115,7 @@ void state(){
       pc.printf("[%d] angle %d , setpoint %f , error %f , setpoint_angle %f\n",i,position[i],toPosition(config[i]._coeff,i),configFb[i].error,config[i]._coeff);
       #endif
 
-      if (i == 1){
+      if (i != 0){
         if (configFb[i].error > 30.0){
           position[i] = position[i] + configFb[i].tua;
         }else if(configFb[i].error < -30.0){
